@@ -2,6 +2,8 @@ require('dotenv').config();
 
 const express = require('express');
 const app = express();
+const _ = require('lodash');
+
 const bodyParser = require('body-parser');
 const ProtocolConstants = require('./utils/protocol-constants');
 const GifSerializer = require('./serializers/gif');
@@ -36,6 +38,7 @@ const server = app.listen(app.get('port'), function() {
 const giphy = require('giphy-api')(),
       memoize = require('memoizee');
 
+let gifDb = [];
 function _getGifs() {
   const opts = {
     limit: 25,
@@ -51,13 +54,15 @@ function _getGifs() {
       });
     });
 
+    gifDb = _.unionWith(gifDb, flattenedGifs, _.isEqual);
+
     return GifSerializer.serialize(flattenedGifs);
   }, function() {
     // ¯\_(ツ)_/¯ - API Limit
     return [];
   });
 }
-const getGifs = memoize(_getGifs, { maxAge: 20000, async: true }); // 2 minutes
+const getGifs = memoize(_getGifs, { maxAge: 2 * 60 * 1000 }); // 2 minutes
 
 var WebSocketServer = require('ws').Server,
     wss = new WebSocketServer({
