@@ -10,6 +10,7 @@ const {
   FRAME_TYPES,
   EVENTS,
 } = require('./utils/protocol-constants');
+const SocketUtils = require('./utils/rt-ember-socket');
 
 const setupGiphyIntegration = require('./initializers/setup-giphy-integration');
 const serializeGifs = require('./serializers/gif');
@@ -29,7 +30,7 @@ setupGiphyIntegration.then(function(gifDb) {
     if (token !== process.env.UPGRADE_NOTIFY_TOKEN) {
       res.sendStatus(401);
     } else {
-      broadcastFrameToClients(FRAME_TYPES.EVENT, EVENTS.CLIENT_UPGRADE);
+      SocketUtils.broadcastEvent(wss, EVENTS.CLIENT_UPGRADE);
       res.sendStatus(201);
     }
   });
@@ -52,29 +53,27 @@ setupGiphyIntegration.then(function(gifDb) {
     sendInitialGifs(ws);
 
     ws.on('message', function(rawData) {
-      const data = JSON.parse(rawData);
+      try {
+        const data = JSON.parse(rawData);
 
-      if (data.frameType === FRAME_TYPES.EVENT) {
-        switch (data.payload.eventType) {
-          case EVENTS.SHARE_GIF:
-            const previouslyShared = _.find(gifDb, 'shared');
-            previouslyShared.shared = false;
+        if (data.frameType === FRAME_TYPES.EVENT) {
+          switch (data.payload.eventType) {
+            case EVENTS.SHARE_GIF:
+              const previouslyShared = _.find(gifDb, 'shared');
+              previouslyShared.shared = false;
 
-            const newShare = _.find(gifDb, { id: data.payload.eventInfo });
-            newShare.shared = true;
+              const newShare = _.find(gifDb, { id: data.payload.eventInfo });
+              newShare.shared = true;
 
-            broadcastFrameToClients(FRAME_TYPES.DATA, serializeGifs([previouslyShared, newShare]));
-            break;
+              SocketUtils.broadcastData(wss, serializeGifs([previouslyShared, newShare]));
+              break;
+          }
         }
+      } catch(e) {
+        console.log(`Didn't understand message from socket. ${rawData}`);
       }
     });
   });
-
-  wss.broadcast = function broadcast(data) {
-    wss.clients.forEach((client) => {
-      client.send(data);
-    });
-  };
 
   function sendInitialGifs(ws) {
     const gifs = gifDb;
@@ -82,23 +81,6 @@ setupGiphyIntegration.then(function(gifDb) {
     const random = _.sampleSize(gifs, 25);
     const payload = random.concat(shared);
 
-    sendFrameToClient(FRAME_TYPES.DATA, serializeGifs(payload), ws);
-  }
-
-  function createFrame(type, payload) {
-    return {
-      frameType: type,
-      payload,
-    };
-  }
-
-  function sendFrameToClient(type, payload, ws) {
-    const framePayload = createFrame(type, payload);
-    ws.send(JSON.stringify(framePayload));
-  }
-
-  function broadcastFrameToClients(type, payload) {
-    const framePayload = createFrame(type, payload);
-    wss.broadcast(JSON.stringify(framePayload));
+    SocketUtils.sendDataToClient(ws, serializeGifs(payload));
   }
 });

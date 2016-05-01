@@ -9,7 +9,8 @@ module.exports = function serializeGif(data) {
   if (_.isArray(data)) {
     data = _.chain(data)
             .compact()
-            .uniqWith(_.isEqual);
+            .uniqWith(_.isEqual)
+            .value();
   }
 
   return serializer.serialize(data);
