@@ -1,20 +1,20 @@
 require('dotenv').config();
 
-const express = require('express');
-const app = express();
-const _ = require('lodash');
+const express = require('express'),
+      app = express(),
+      _ = require('lodash'),
+      bodyParser = require('body-parser');
 
-const bodyParser = require('body-parser');
-const ProtocolConstants = require('./utils/protocol-constants');
-const GifSerializer = require('./serializers/gif');
-
-const PROTOCOL_VERSION = ProtocolConstants.PROTOCOL_VERSION;
-const FRAME_TYPES = ProtocolConstants.FRAME_TYPES;
-const EVENTS = ProtocolConstants.EVENTS;
+const {
+  PROTOCOL_VERSION,
+  FRAME_TYPES,
+  EVENTS,
+} = require('./utils/protocol-constants');
 
 const setupGiphyIntegration = require('./initializers/setup-giphy-integration');
+const serializeGifs = require('./serializers/gif');
 
-setupGiphyIntegration.then(function() {
+setupGiphyIntegration.then(function(gifDb) {
   app.set('port', (process.env.PORT || 5000));
   app.use(bodyParser.json());
   app.use(function(req, res, next) {
@@ -57,18 +57,13 @@ setupGiphyIntegration.then(function() {
       if (data.frameType === FRAME_TYPES.EVENT) {
         switch (data.payload.eventType) {
           case EVENTS.SHARE_GIF:
-            const previouslyShared = _.findIndex(global.gifDb, 'shared');
-            if (previouslyShared >= 0) {
-              global.gifDb[previouslyShared].shared = false;
-            }
+            const previouslyShared = _.find(gifDb, 'shared');
+            previouslyShared.shared = false;
 
-            const newShare = _.findIndex(global.gifDb, { id: data.payload.eventInfo });
-            global.gifDb[newShare].shared = true;
+            const newShare = _.find(gifDb, { id: data.payload.eventInfo });
+            newShare.shared = true;
 
-            const dataForUpdate = _.compact([global.gifDb[previouslyShared], global.gifDb[newShare]]);
-
-            broadcastFrameToClients(FRAME_TYPES.DATA, GifSerializer.serialize(dataForUpdate));
-
+            broadcastFrameToClients(FRAME_TYPES.DATA, serializeGifs([previouslyShared, newShare]));
             break;
         }
       }
@@ -82,12 +77,12 @@ setupGiphyIntegration.then(function() {
   };
 
   function sendInitialGifs(ws) {
-    const gifs = global.gifDb;
+    const gifs = gifDb;
     const shared = _.find(gifs, 'shared');
     const random = _.sampleSize(gifs, 25);
     const payload = random.concat(shared);
 
-    sendFrameToClient(FRAME_TYPES.DATA, GifSerializer.serialize(payload), ws);
+    sendFrameToClient(FRAME_TYPES.DATA, serializeGifs(payload), ws);
   }
 
   function createFrame(type, payload) {

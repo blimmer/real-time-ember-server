@@ -1,8 +1,7 @@
-const _ = require('lodash');
-global.gifDb = [];
+const _ = require('lodash'),
+      giphy = require('giphy-api')();
 
-const giphy = require('giphy-api')();
-
+let gifDb = [];
 function _getGifs() {
   const opts = {
     limit: 25,
@@ -18,7 +17,7 @@ function _getGifs() {
       });
     });
 
-    global.gifDb = _.unionWith(global.gifDb, flattenedGifs, _.isEqual);
+    gifDb = _.unionWith(gifDb, flattenedGifs, _.isEqual);
   }, function() {
     // ¯\_(ツ)_/¯ - API Limit
   });
@@ -30,7 +29,7 @@ setInterval(function() {
 
 module.exports = new Promise(function(resolve) {
   _getGifs().then(function() {
-    global.gifDb[0].shared = true;
-    resolve();
+    gifDb[0].shared = true;
+    resolve(gifDb);
   });
 });
