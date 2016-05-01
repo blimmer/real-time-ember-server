@@ -10,8 +10,8 @@ const {
   FRAME_TYPES,
   EVENTS,
 } = require('./utils/protocol-constants');
-const SocketUtils = require('./utils/rt-ember-socket');
 
+const SocketUtils = require('./utils/rt-ember-socket');
 const setupGiphyIntegration = require('./initializers/setup-giphy-integration');
 const serializeGifs = require('./serializers/gif');
 
@@ -59,11 +59,13 @@ setupGiphyIntegration.then(function(gifDb) {
         if (data.frameType === FRAME_TYPES.EVENT) {
           switch (data.payload.eventType) {
             case EVENTS.SHARE_GIF:
-              const previouslyShared = _.find(gifDb, 'shared');
-              previouslyShared.shared = false;
-
               const newShare = _.find(gifDb, { id: data.payload.eventInfo });
+              if (!newShare) { throw Error('tried to share unknown gif'); }
+
+              const previouslyShared = _.find(gifDb, 'shared');
+
               newShare.shared = true;
+              previouslyShared.shared = false;
 
               SocketUtils.broadcastData(wss, serializeGifs([previouslyShared, newShare]));
               break;
@@ -71,6 +73,7 @@ setupGiphyIntegration.then(function(gifDb) {
         }
       } catch(e) {
         console.log(`Didn't understand message from socket. ${rawData}`);
+        ws.close(1003); // unsupported data
       }
     });
   });
