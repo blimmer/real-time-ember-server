@@ -63,6 +63,7 @@ setupGiphyIntegration.then(function(gifDb) {
               if (!newShare) { throw Error('tried to share unknown gif'); }
 
               const previouslyShared = _.find(gifDb, 'shared');
+              if (newShare === previouslyShared) { return; }
 
               newShare.shared = true;
               previouslyShared.shared = false;
