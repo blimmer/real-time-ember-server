@@ -1,20 +1,19 @@
 {
   "name": "server",
   "version": "1.0.0",
+  "engines": {
+    "node": "6.x"
+  },
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "body-parser": "^1.15.0",
-    "ember-cli": "^2.5.0",
-    "express": "^4.13.4",
+    "giphy-api": "^1.1.14",
+    "jsonapi-serializer": "^3.2.1",
     "lodash": "^4.11.1",
-    "memoizee": "^0.3.10",
     "ws": "^1.1.0"
   },
-  "devDependencies": {
-    "dotenv": "^2.0.0"
-  },
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Ben Limmer <ben@benlimmer.com> (http://benlimmer.com/)",
