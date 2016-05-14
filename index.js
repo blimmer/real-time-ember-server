@@ -19,6 +19,14 @@ setupGiphyIntegration.then(function(gifDb) {
           if(supportedProtocol) { cb(true, supportedProtocol); return; }
           cb(false);
         },
+        verifyClient: function(info, callback) {
+          if (info.origin === 'http://real-time-ember.s3-website-us-west-2.amazonaws.com') {
+            callback(true);
+            return;
+          } else {
+            callback(false);
+          }
+        }
       });
 
   function sendInitialGifs(ws) {
