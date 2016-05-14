@@ -4,7 +4,7 @@ const _ = require('lodash'),
 let gifDb = [];
 function _getGifs() {
   const opts = {
-    limit: 25,
+    limit: 24,
     rating: 'pg-13',
   };
 

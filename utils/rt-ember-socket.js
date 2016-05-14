@@ -1,7 +1,5 @@
 const {
-  PROTOCOL_VERSION,
   FRAME_TYPES,
-  EVENTS,
 } = require('./protocol-constants');
 
 function createFrame(type, payload) {
@@ -24,23 +22,6 @@ function broadcastFrameToClients(wss, type, payload) {
   });
 }
 
-function sendEventToClient(ws, eventType, eventInfo) {
-  sendFrameToClient(
-    ws,
-    FRAME_TYPES.EVENT,
-    {
-      eventType,
-      eventInfo,
-    }
-  );
-}
-
-function broadcastEvent(wss, eventType, eventInfo) {
-  wss.clients.forEach((ws) => {
-    sendEventToClient(ws, eventType, eventInfo);
-  });
-}
-
 function sendDataToClient(ws, dataPayload) {
   sendFrameToClient(
     ws,
@@ -58,8 +39,6 @@ function broadcastData(wss, dataPayload) {
 module.exports = {
   sendFrameToClient,
   broadcastFrameToClients,
-  sendEventToClient,
-  broadcastEvent,
   sendDataToClient,
   broadcastData,
 };

@@ -5,7 +5,6 @@ module.exports = {
     DATA:  'data',
   },
   EVENTS: {
-    CLIENT_UPGRADE: 'client_upgrade',
     SHARE_GIF: 'share_gif',
   }
 };

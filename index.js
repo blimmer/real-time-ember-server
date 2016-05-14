@@ -1,9 +1,6 @@
 require('dotenv').config();
 
-const express = require('express'),
-      app = express(),
-      _ = require('lodash'),
-      bodyParser = require('body-parser');
+const _ = require('lodash');
 
 const {
   PROTOCOL_VERSION,
@@ -16,38 +13,24 @@ const setupGiphyIntegration = require('./initializers/setup-giphy-integration');
 const serializeGifs = require('./serializers/gif');
 
 setupGiphyIntegration.then(function(gifDb) {
-  app.set('port', (process.env.PORT || 5000));
-  app.use(bodyParser.json());
-  app.use(function(req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    next();
-  });
-
-  app.post('/api/v1/notify-upgrade', function(req, res) {
-    const token = req.body.token;
-
-    if (token !== process.env.UPGRADE_NOTIFY_TOKEN) {
-      res.sendStatus(401);
-    } else {
-      SocketUtils.broadcastEvent(wss, EVENTS.CLIENT_UPGRADE);
-      res.sendStatus(201);
-    }
-  });
-
-  const server = app.listen(app.get('port'), function() {
-    console.log('Node app is running on port', app.get('port'));
-  });
-
   var WebSocketServer = require('ws').Server,
       wss = new WebSocketServer({
-        server,
+        port: process.env.PORT || 5000,
         handleProtocols: function(protocol, cb) {
           var supportedProtocol = protocol[protocol.indexOf(PROTOCOL_VERSION)];
           if(supportedProtocol) { cb(true, supportedProtocol); return; }
           cb(false);
         },
       });
+
+  function sendInitialGifs(ws) {
+    const gifs = gifDb;
+    const shared = _.find(gifs, 'shared');
+    const random = _.sampleSize(gifs, 25);
+    const payload = random.concat(shared);
+
+    SocketUtils.sendDataToClient(ws, serializeGifs(payload));
+  }
 
   wss.on('connection', function(ws) {
     sendInitialGifs(ws);
@@ -78,13 +61,4 @@ setupGiphyIntegration.then(function(gifDb) {
       }
     });
   });
-
-  function sendInitialGifs(ws) {
-    const gifs = gifDb;
-    const shared = _.find(gifs, 'shared');
-    const random = _.sampleSize(gifs, 25);
-    const payload = random.concat(shared);
-
-    SocketUtils.sendDataToClient(ws, serializeGifs(payload));
-  }
 });
